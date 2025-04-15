@@ -1,0 +1,39 @@
+9.	Database security
+    1.Implementing access control
+        Create a new database
+        CREATE DATABASE SecureDB;
+        GO
+        Create user with admin privileges
+        USE SecureDB;
+        CREATE LOGIN admin_user WITH PASSWORD = 'StrongPassword';
+        CREATE USER admin_user FOR LOGIN admin_user;
+        EXEC sp_addrolemember 'db_owner', 'admin_user';
+        GO
+        Create a read-only user
+        USE SecureDB;
+        CREATE LOGIN read_only_user WITH PASSWORD = 'ReadOnlyPassword';
+        CREATE USER read_only_user FOR LOGIN read_only_user;
+        EXEC sp_addrolemember 'db_datareader', 'read_only_user';
+        GO
+
+    2.Implementing authentication
+        Enforce strong password policies
+        ALTER LOGIN admin_user WITH CHECK_POLICY = ON,
+        CHECK_EXPIRATION = ON;
+        ALTER LOGIN read_only_user WITH CHECK_POLICY = ON,
+        CHECK_EXPIRATION = ON;
+        
+    3.Testing and verification
+        Audit and Logging
+        CREATE SERVER AUDIT AuditTest
+        TO FILE (FILEPATH = 'C:\Audit\');
+        ALTER SERVER AUDIT AuditTest WITH (STATE = ON);
+        GO
+        CREATE DATABASE AUDIT SPECIFICATION AuditSpec
+        FOR SERVER AUDIT AuditTest
+        ADD (SELECT ON DATABASE::SecureDB BY read_only_user),
+        ADD (SELECT, INSERT, UPDATE, DELETE ON DATABASE::SecureDB BY
+        admin_user);
+        ALTER DATABASE AUDIT SPECIFICATION AuditSpec WITH (STATE =
+        ON);
+        GO

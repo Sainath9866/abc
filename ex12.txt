@@ -1,0 +1,60 @@
+10.	Encryption and integrity control
+    1.Transparent Data Encryption
+        Create a master key
+        USE master;
+        GO
+        CREATE MASTER KEY ENCRYPTION BY PASSWORD =
+        'StrongPasswordForMasterKey';
+        GO
+        Create a Certificate
+        USE master;
+        GO
+        CREATE CERTIFICATE TDE_Cert WITH SUBJECT = 'TDE Certificate';
+        GO
+        Create a database encryption key
+        USE SecureDB;
+        GO
+        CREATE DATABASE ENCRYPTION KEY
+        WITH ALGORITHM = AES_256
+        ENCRYPTION BY SERVER CERTIFICATE TDE_Cert;
+        GO
+        Enable TDE on the Database
+        ALTER DATABASE SecureDB
+        SET ENCRYPTION ON;
+        GO
+        Verify Encryption
+        USE SecureDB;
+        GO
+        SELECT name, is_encrypted
+        FROM sys.databases
+        WHERE name = 'SecureDB';
+        GO
+    2.Column-Level Encryption
+        Create a Symmetric Key
+        USE SecureDB;
+        GO
+        CREATE SYMMETRIC KEY SymmetricKey
+        WITH ALGORITHM = AES_256
+        ENCRYPTION BY CERTIFICATE TDE_Cert;
+        GO
+        Encrypt Data in a Table
+        CREATE TABLE SensitiveData (
+        ID INT PRIMARY KEY,
+        SensitiveInfo VARBINARY(MAX)
+        );
+        GO
+        OPEN SYMMETRIC KEY SymmetricKey
+        DECRYPTION BY CERTIFICATE TDE_Cert;
+        INSERT INTO SensitiveData (ID, SensitiveInfo)
+        VALUES (1, ENCRYPTBYKEY(KEY_GUID('SymmetricKey'), 'Sensitive
+        Information'));
+        GO
+        CLOSE SYMMETRIC KEY SymmetricKey;
+        Decrypt Data for Viewing
+        OPEN SYMMETRIC KEY SymmetricKey
+        DECRYPTION BY CERTIFICATE TDE_Cert;
+        SELECT ID, CONVERT(VARCHAR(MAX), DECRYPTBYKEY(SensitiveInfo)) AS
+        SensitiveInfo
+        FROM SensitiveData;
+        GO
+        CLOSE SYMMETRIC KEY SymmetricKey;
